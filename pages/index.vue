@@ -1,87 +1,181 @@
 <template>
-  <v-row justify="center" align="center">
-    <v-col cols="12" sm="8" md="6">
-      <v-card class="logo py-4 d-flex justify-center">
-        <NuxtLogo />
-        <VuetifyLogo />
-      </v-card>
-      <v-card>
-        <v-card-title class="headline">
-          Welcome to the Vuetify + Nuxt.js template
-        </v-card-title>
-        <v-card-text>
-          <p>
-            Vuetify is a progressive Material Design component framework for
-            Vue.js. It was designed to empower developers to create amazing
-            applications.
-          </p>
-          <p>
-            For more information on Vuetify, check out the
-            <a
-              href="https://vuetifyjs.com"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              documentation </a
-            >.
-          </p>
-          <p>
-            If you have questions, please join the official
-            <a
-              href="https://chat.vuetifyjs.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              title="chat"
-            >
-              discord </a
-            >.
-          </p>
-          <p>
-            Find a bug? Report it on the github
-            <a
-              href="https://github.com/vuetifyjs/vuetify/issues"
-              target="_blank"
-              rel="noopener noreferrer"
-              title="contribute"
-            >
-              issue board </a
-            >.
-          </p>
-          <p>
-            Thank you for developing with Vuetify and I look forward to bringing
-            more exciting features in the future.
-          </p>
-          <div class="text-xs-right">
-            <em><small>&mdash; John Leider</small></em>
-          </div>
-          <hr class="my-3" />
-          <a
-            href="https://nuxtjs.org/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Nuxt Documentation
-          </a>
-          <br />
-          <a
-            href="https://github.com/nuxt/nuxt.js"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Nuxt GitHub
-          </a>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn color="primary" nuxt to="/inspire"> Continue </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-col>
-  </v-row>
+  <v-container fill-height>
+    <v-row>
+      <v-col lg="2">
+        <v-list dense>
+          <v-subheader>Показатели</v-subheader>
+          <v-list-item-group>
+            <v-list-item @click="selectTab(0)">
+              <v-list-item-icon>
+                <v-icon>mdi-meter-electric</v-icon>
+              </v-list-item-icon>
+              <v-list-item-content>
+                Мощность: {{ power }} dbW
+              </v-list-item-content>
+            </v-list-item>
+
+            <v-list-item @click="selectTab(1)">
+              <v-list-item-icon>
+                <v-icon>mdi-lightning-bolt-circle</v-icon>
+              </v-list-item-icon>
+              <v-list-item-content>
+                Энергия: {{ energy }}W
+              </v-list-item-content>
+            </v-list-item>
+
+            <v-list-item @click="selectTab(2)">
+              <v-list-item-icon>
+                <v-icon>mdi-account-multiple</v-icon>
+              </v-list-item-icon>
+              <v-list-item-content>
+                Клиентов: {{ clients.length }}
+              </v-list-item-content>
+            </v-list-item>
+
+            <v-list-item @click="selectTab(3)">
+              <v-list-item-icon>
+                <v-icon>mdi-wan</v-icon>
+              </v-list-item-icon>
+              <v-list-item-content>
+                Сеть: {{ network }} MB/s
+              </v-list-item-content>
+            </v-list-item>
+          </v-list-item-group>
+        </v-list>
+
+        <v-card class="pa-2 mt-4">
+          <h3 class="text-center mb-2">Система: <span class="pa-1 success">OK</span></h3>
+          <v-btn class="mb-2" color="">Перезагрузить</v-btn>
+          <v-btn class="mb-2" color="">Отключить</v-btn>
+          <v-btn class="mb-2" color="">Обновить</v-btn>
+        </v-card>
+      </v-col>
+
+      <v-col>
+        <v-card class="q-">
+          <template v-if="tab == 0">
+            <v-scroll-x-transition>
+              <h1 class="text-center">Детали мощности</h1>
+            </v-scroll-x-transition>
+            <v-container>
+              <v-row>
+                <v-col lg="1">Лимит ({{maxPower}}):</v-col>
+                <v-col>
+                  <v-slider v-model="maxPower" step="10" thumb-label ticks></v-slider>
+                </v-col>
+              </v-row>
+            </v-container>
+          </template>
+          <template v-if="tab == 1">
+            <v-scroll-x-transition>
+              <h1 class="text-center">Детали энергии</h1>
+            </v-scroll-x-transition>
+            <v-container>
+              <v-row>
+              <v-col lg="1">Лимит ({{maxEnergy}}):</v-col>
+              <v-col>
+                <v-slider v-model="maxEnergy" step="10" thumb-label ticks></v-slider>
+              </v-col>
+            </v-row>
+            </v-container>
+          </template>
+          <template v-if="tab == 2">
+            <v-scroll-x-transition>
+              <h1 class="text-center">Клиенты</h1>
+            </v-scroll-x-transition>
+            <v-data-table :headers="tHeaders" :items="tClients" :items-per-page="5" class="elevation-1"></v-data-table>
+          </template>
+          <template v-if="tab == 3">
+            <v-scroll-x-transition>
+              <h1 class="text-center">Детали сети</h1>
+            </v-scroll-x-transition>
+
+            <line-chart :chart-options='chartOptions' :chart-data='chartData' chart-id='myCustomId' />
+          </template>
+        </v-card>
+      </v-col>
+
+    </v-row>
+  </v-container>
 </template>
 
 <script>
+
 export default {
   name: 'IndexPage',
+  data() {
+    return {
+      power: 0,
+      energy: 0,
+      clients: [
+        {
+          number: '8-800-555-35-35',
+          speed: 12.5
+        },
+        {
+          number: '8-900-555-35-35',
+          speed: 15.5
+        },
+        {
+          number: '8-700-555-35-35',
+          speed: 9.5
+        }
+      ],
+
+      maxPower: 10,
+      maxEnergy: 10,
+
+      network: 0,
+      tab: 0,
+      tHeaders: [
+        { text: '№', value: 'id' },
+        { text: 'Номер', value: 'number' },
+        { text: 'Скорость', value: 'speed' },
+      ],
+      chartData: {
+        labels: [],
+        datasets: [
+          {
+            label: 'Сеть',
+            data: [],
+            fill: false,
+            borderColor: 'rgb(75, 192, 192)'
+          }
+        ]
+      },
+      chartOptions: { responsive: true, maintainAspectRatio: false },
+    }
+  },
+  computed: {
+    tClients() {
+      const clients = []
+      let id = 0
+      for (const client of this.clients) {
+        clients.push({
+          id,
+          number: client.number,
+          speed: client.speed
+        })
+        id++
+      }
+      return clients
+    }
+  },
+  mounted() {
+    setInterval(this.update, 1000)
+  },
+  methods: {
+    selectTab(_tab) {
+      this.tab = _tab
+    },
+    update() {
+      this.power++
+      this.energy++
+      this.network++
+
+      this.chartData.labels.push(new Date().toLocaleTimeString())
+      this.chartData.datasets[0].data.push(this.network)
+    }
+  },
 }
 </script>

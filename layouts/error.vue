@@ -6,7 +6,7 @@
     <h1 v-else>
       {{ otherError }}
     </h1>
-    <NuxtLink to="/"> Home page </NuxtLink>
+    <NuxtLink to="/"> Домашняя страница </NuxtLink>
   </v-app>
 </template>
 

@@ -6,7 +6,7 @@ export default {
     titleTemplate: '%s - srv',
     title: 'srv',
     htmlAttrs: {
-      lang: 'en',
+      lang: 'ru',
     },
     meta: [
       { charset: 'utf-8' },
@@ -21,7 +21,9 @@ export default {
   css: [],
 
   // Plugins to run before rendering page: https://go.nuxtjs.dev/config-plugins
-  plugins: [],
+  plugins: [
+    {src: '~/plugins/chart/chart.js', mode: 'client'}
+  ],
 
   // Auto import components: https://go.nuxtjs.dev/config-components
   components: true,
