@@ -6,7 +6,7 @@
       </v-container>
     </v-main>
     <v-footer :absolute="!fixed" app class="d-flex justify-space-between">
-      <span>&copy; ПИ - {{ new Date().getFullYear() }}</span>
+      <span>&copy;  - {{ new Date().getFullYear() }}</span>
       <div class="d-flex flex-row align-center">
         <v-switch v-model="$vuetify.theme.dark" ></v-switch>
         <span>Время: {{ time }}</span>
@@ -23,15 +23,15 @@ export default {
       time: ''
     }
   },
+  mounted() {
+    this.updateTime()
+    setInterval(this.updateTime, 1000)
+  },
   methods: {
     updateTime() {
       const date = new Date()
       this.time = `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`
     }
   },
-  mounted() {
-    this.updateTime()
-    setInterval(this.updateTime, 1000)
-  }
 }
 </script>

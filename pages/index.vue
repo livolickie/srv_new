@@ -40,6 +40,15 @@
                 Сеть: {{ network }} MB/s
               </v-list-item-content>
             </v-list-item>
+
+            <v-list-item @click="selectTab(4)">
+              <v-list-item-icon>
+                <v-icon>mdi-map</v-icon>
+              </v-list-item-icon>
+              <v-list-item-content>
+                Карта сети
+              </v-list-item-content>
+            </v-list-item>
           </v-list-item-group>
         </v-list>
 
@@ -47,7 +56,8 @@
           <h3 class="text-center mb-2">Система: <span class="pa-1 success">OK</span></h3>
           <v-btn class="mb-2" @click="status = 'reload'; reload()">Перезагрузить</v-btn>
           <v-btn v-if="status != 'reload'" class="mb-2" :color="status != 'pause' ? '' : 'success'"
-            @click="status == 'active' ? status = 'pause' : status = 'active'; snack = status == 'pause'; snackMessage='Система поставлена на паузу'">{{ status != 'active' ? 'Возобновить' :
+            @click="status == 'active' ? status = 'pause' : status = 'active'; snack = status == 'pause'; snackMessage = 'Система поставлена на паузу'">
+            {{ status != 'active' ? 'Возобновить' :
                 'Пауза'
             }}</v-btn>
         </v-card>
@@ -61,12 +71,12 @@
             </v-scroll-x-transition>
             <v-container>
               <v-row>
-                <v-col lg="1">Лимит ({{ maxPower }}):</v-col>
+                <v-col lg="1">Лимит ({{ maxPower }} dbW):</v-col>
                 <v-col>
                   <v-slider v-model="maxPower" min="90" max="180" step="10" thumb-label ticks></v-slider>
                 </v-col>
               </v-row>
-              <h3>Затрачено: {{spentPower}} dbW</h3>
+              <h3>Затрачено: {{ spentPower }} dbW</h3>
             </v-container>
           </template>
           <template v-if="tab == 1">
@@ -75,12 +85,12 @@
             </v-scroll-x-transition>
             <v-container>
               <v-row>
-                <v-col lg="1">Лимит ({{ maxEnergy }}):</v-col>
+                <v-col lg="1">Лимит ({{ maxEnergy }}W):</v-col>
                 <v-col>
                   <v-slider v-model="maxEnergy" min="350" max="800" step="10" thumb-label ticks></v-slider>
                 </v-col>
               </v-row>
-              <h3>Затрачено: {{spentEnergy}}W</h3>
+              <h3>Затрачено: {{ spentEnergy }}W</h3>
             </v-container>
           </template>
           <template v-if="tab == 2">
@@ -93,8 +103,24 @@
             <v-scroll-x-transition>
               <h1 class="text-center">Детали сети</h1>
             </v-scroll-x-transition>
+            <v-container>
+              <v-row>
+                <v-col lg="1">Лимит ({{ maxNetwork }} MB/s):</v-col>
+                <v-col>
+                  <v-slider v-model="maxNetwork" min="800" max="1500" step="25" thumb-label ticks></v-slider>
+                </v-col>
+              </v-row>
+            </v-container>
 
             <line-chart :chart-options='chartOptions' :chart-data='chartData' chart-id='myCustomId' />
+          </template>
+          <template v-if="tab == 4">
+            <v-scroll-x-transition>
+              <h1 class="text-center">Карта сети</h1>
+            </v-scroll-x-transition>
+            <container>
+              <canvas id="canvas" width="800" height="800" class="mt-5" style="margin: 0 auto"></canvas>
+            </container>
           </template>
         </v-card>
       </v-col>
@@ -115,12 +141,8 @@
       </v-progress-circular>
     </v-row>
 
-    <canvas width="500" height="400" id="canvas" class="mt-5"></canvas>
 
-    <v-snackbar
-      v-model="snack"
-      :multi-line="multiLine"
-    >
+    <v-snackbar v-model="snack" :multi-line="multiLine">
       {{ snackMessage }}
     </v-snackbar>
 
@@ -143,9 +165,10 @@ export default {
 
       spentPower: 0,
       spentEnergy: 0,
-      
+
       maxPower: 120,
       maxEnergy: 420,
+      maxNetwork: 1000,
 
       snackMessage: '',
       snack: false,
@@ -157,7 +180,7 @@ export default {
         { text: 'Номер', value: 'number' },
         { text: 'Скорость', value: 'speed' },
       ],
-      ctx: null,
+      canvas: null,
       chartData: {
         labels: [],
         datasets: [
@@ -207,15 +230,9 @@ export default {
   },
   mounted() {
     this.init()
-    setInterval(this.update, 500)
+    setInterval(this.update, 100)
   },
   methods: {
-    canvas() {
-      const canvas = document.querySelector('#canvas')
-      this.ctx = canvas.getContext('2d')
-      this.ctx.fillStyle = 'rgb(100, 100, 100)'
-      this.ctx.fillRect(0, 0, 800, 600)
-    },
     init() {
       this.chartData = {
         labels: [],
@@ -246,13 +263,12 @@ export default {
           number: `8-700-${Math.round(Math.random() * 200 + 300)}-${Math.round(Math.random() * 55 + 20)}-${Math.round(Math.random() * 35 + 10)}`,
           speed: parseFloat((Math.random() * 10 + 5).toFixed(1)),
           active: Math.random() > 0.573,
-          x: Math.random() * 500,
-          y: Math.random() * 400
+          x: Math.random() * 800,
+          y: Math.random() * 800
         })
 
         this.status = 'active'
       }
-      this.canvas()
     },
     reload() {
       clearInterval(this.loadInterval)
@@ -264,51 +280,19 @@ export default {
           clearInterval(this.loadInterval)
         }
       }, 300)
-      setTimeout(this.init, 3000)
+      setTimeout(this.init, 500)
     },
     selectTab(_tab) {
+      if (_tab === 4) {
+        setTimeout(() => {
+          this.canvas = document.querySelector('#canvas')
+        }, 250)
+      }
       this.tab = _tab
     },
     update() {
 
       if (this.status !== 'active') return
-
-      // Генерация рандомных данных (отлючение - подключение клиентов)
-      this.ctx.fillStyle = 'rgb(100, 100, 100)'
-      this.ctx.fillRect(0, 0, 800, 600)
-      this.ctx.fillStyle = 'rgb(0, 100, 0)'
-      for (const client of this.clients) {
-        if (client.active && Math.random() > 0.99) {
-          client.active = false
-        }
-        else if (!client.active && Math.random() < 0.01) client.active = true
-
-        if (client.active) {
-          const rnd = Math.random()
-          if (rnd > 0.98) {
-            const changeVal = Math.random() * 1 + 0.5
-            if (client.speed < 15) client.speed += changeVal
-            else client.speed -= changeVal
-
-            client.speed = parseFloat(client.speed.toFixed(1))
-          }
-
-
-          if (Math.random() < 0.25) {
-            if (client.x < 500 && Math.random() > 0.5) client.x += Math.random() * 5
-            else client.x -= Math.random() * 5
-          }
-          else if (Math.random() > 0.75) {
-            if (client.y < 500 && Math.random() < 0.5) client.y += Math.random() * 5
-            else client.y -= Math.random() * 5
-          }
-
-          // Canvas
-          this.ctx.beginPath()
-          this.ctx.arc(client.x, client.y, 2, 0, 2 *Math.PI)
-          this.ctx.stroke()
-        }
-      }
 
       this.network = 0
       // Сеть будет зависеть от клиентов
@@ -326,6 +310,82 @@ export default {
       this.power = Math.round((this.network / 10 + Math.random()) + 5 * Math.random())
 
       this.energy = parseFloat((this.power * 3.5 + 3 * Math.random()).toFixed(1))
+
+      // Генерация рандомных данных (отлючение - подключение клиентов)
+      if (this.canvas) {
+        const ctx = this.canvas.getContext('2d')
+        ctx.clearRect(0, 0, 800, 800)
+        ctx.fillStyle = 'rgb(18,18,18)'
+        ctx.fillRect(0, 0, 800, 800)
+        
+        ctx.strokeStyle = 'rgb(68, 240, 34)'
+        ctx.fillStyle = 'rgb(68, 240, 34)'
+        for (const client of this.clients) {
+          if (client.active && Math.random() > 0.99) {
+            client.active = false
+          }
+          else if (!client.active && Math.random() < 0.01) client.active = true
+
+          if (client.active) {
+            const rnd = Math.random()
+            if (rnd > 0.98) {
+              const changeVal = Math.random() * 1 + 0.5
+              if (client.speed < 15) client.speed += changeVal
+              else client.speed -= changeVal
+
+              client.speed = parseFloat(client.speed.toFixed(1))
+            }
+
+
+            if (Math.random() < 0.55) {
+              if (client.x < 800 && Math.random() > 0.5) client.x += Math.random() * 5
+              else client.x -= Math.random() * 2.5
+            }
+            else if (Math.random() > 0.5) {
+              if (client.y < 800 && Math.random() < 0.5) client.y += Math.random() * 5
+              else client.y -= Math.random() * 2.5
+            }
+
+            // Canvas
+            ctx.beginPath()
+            ctx.arc(client.x, client.y, 2, 0, 2 * Math.PI)
+            ctx.fill()
+          }
+        }
+
+
+        ctx.font = '12px Roboto'
+        // 2G
+        const r3 = this.power * 4.5
+        ctx.globalAlpha = 0.1
+        ctx.fillStyle = 'rgb(91, 97, 91)'
+        ctx.beginPath()
+        ctx.arc(400, 400, r3, 0, 2 * Math.PI)
+        ctx.fill()
+        
+        // 3G
+        const r2 = this.power * 3.25
+        ctx.globalAlpha = 0.1
+        ctx.fillStyle = 'rgb(73, 171, 72)'
+        ctx.beginPath()
+        ctx.arc(400, 400, r2, 0, 2 * Math.PI)
+        ctx.fill()
+
+        // Вычисление радиуса на основе мощность (4G сеть)
+        const r = this.power * 1.5
+        ctx.globalAlpha = 0.1
+        ctx.fillStyle = 'rgb(255, 0, 251)'
+        ctx.beginPath()
+        ctx.arc(400, 400, r, 0, 2 * Math.PI)
+        ctx.fill()
+
+        ctx.globalAlpha = 1
+        ctx.strokeStyle = 'rgb(255, 255, 255)'
+        ctx.strokeRect(400 - 16, 400 - 16, 16, 16)
+
+        ctx.fillStyle = 'rgb(255,255,255)'
+        ctx.fillText('Станция', 405, 395)
+      }
 
       if (this.chartData.datasets[0].data.length > 400) {
         this.chartData.datasets[0].data.shift()
