@@ -71,12 +71,12 @@
             </v-scroll-x-transition>
             <v-container>
               <v-row>
-                <v-col lg="1">Лимит ({{ maxPower }} dbW):</v-col>
+                <v-col lg="1">Мощность ({{ power }} dbW):</v-col>
                 <v-col>
-                  <v-slider v-model="maxPower" min="90" max="180" step="10" thumb-label ticks></v-slider>
+                  <v-slider v-model="power" min="50" max="180" step="10" thumb-label ticks></v-slider>
                 </v-col>
               </v-row>
-              <h3>Затрачено: {{ spentPower }} dbW</h3>
+              <!-- <h3>Затрачено: {{ spentPower }} dbW</h3> -->
             </v-container>
           </template>
           <template v-if="tab == 1">
@@ -84,13 +84,13 @@
               <h1 class="text-center">Детали энергии</h1>
             </v-scroll-x-transition>
             <v-container>
-              <v-row>
-                <v-col lg="1">Лимит ({{ maxEnergy }}W):</v-col>
+              <!-- <v-row> -->
+              <!-- <v-col lg="1">Лимит ({{ maxEnergy }}W):</v-col>
                 <v-col>
                   <v-slider v-model="maxEnergy" min="350" max="800" step="10" thumb-label ticks></v-slider>
                 </v-col>
-              </v-row>
-              <h3>Затрачено: {{ spentEnergy }}W</h3>
+              </v-row>-->
+              <h3>Затрачено: {{ spentEnergy.toFixed(1) }}W</h3>
             </v-container>
           </template>
           <template v-if="tab == 2">
@@ -150,6 +150,14 @@
 </template>
 
 <script>
+
+/*
+  power - manual
+  energy = power * 3.5 + random()
+  heat = energy * 10 || Red Signal on HEAT > 75%
+  network = each_client.dist_to_station * (AREA_TYPE) + random() || limit (100MB - 2000MB)
+  || RED SIGNAL ON WHERE 75% OF CLIENTS SPEED < 25%
+*/
 
 export default {
   name: 'IndexPage',
@@ -230,7 +238,7 @@ export default {
   },
   mounted() {
     this.init()
-    setInterval(this.update, 100)
+    setInterval(this.update, 250)
   },
   methods: {
     init() {
@@ -262,7 +270,7 @@ export default {
         this.clients.push({
           number: `8-700-${Math.round(Math.random() * 200 + 300)}-${Math.round(Math.random() * 55 + 20)}-${Math.round(Math.random() * 35 + 10)}`,
           speed: parseFloat((Math.random() * 10 + 5).toFixed(1)),
-          active: Math.random() > 0.573,
+          active: Math.random() > 0.773,
           x: Math.random() * 800,
           y: Math.random() * 800
         })
@@ -296,8 +304,38 @@ export default {
 
       this.network = 0
       // Сеть будет зависеть от клиентов
-      for (const client of this.activeClients) {
-        this.network += client.speed / 10
+      for (const client of this.clients) {
+
+        if (Math.random() < 0.55) {
+          if (client.x < 800 && Math.random() > 0.5) client.x += Math.random() * 5
+          else client.x -= Math.random() * 2.5
+        }
+        else if (Math.random() > 0.5) {
+          if (client.y < 800 && Math.random() < 0.5) client.y += Math.random() * 5
+          else client.y -= Math.random() * 2.5
+        }
+
+        const distance = Math.sqrt((Math.pow(client.x - 392, 2) + Math.pow(client.y - 392, 2)))
+        client.speed = distance * 0.1 + this.power / 50
+        if (client.active && Math.random() > 0.99) {
+          client.active = false
+        }
+        else if (!client.active && Math.random() < 0.01) client.active = true
+
+        if (client.active) {
+          const rnd = Math.random()
+          if (rnd > 0.98) {
+            const changeVal = Math.random() * 1 + 0.5
+            if (client.speed < 15) client.speed += changeVal
+            else client.speed -= changeVal
+
+            client.speed = parseFloat(client.speed.toFixed(1))
+          }
+
+          this.network += client.speed
+
+          client.speed = Number.parseFloat(client.speed.toFixed(1))
+        }
       }
       this.network = Math.round(this.network)
 
@@ -307,9 +345,9 @@ export default {
       this.spentPower = parseFloat(this.spentPower.toFixed(1))
       this.spendEnergy = parseFloat(this.spentEnergy.toFixed(1))
       // Мощность зависит от сети
-      this.power = Math.round((this.network / 10 + Math.random()) + 5 * Math.random())
+      // this.power = Math.round((this.network / 10 + Math.random()) + 5 * Math.random())
 
-      this.energy = parseFloat((this.power * 3.5 + 3 * Math.random()).toFixed(1))
+      this.energy = parseFloat((this.power * 4.5 + 3 * Math.random()).toFixed(1))
 
       // Генерация рандомных данных (отлючение - подключение клиентов)
       if (this.canvas) {
@@ -317,36 +355,13 @@ export default {
         ctx.clearRect(0, 0, 800, 800)
         ctx.fillStyle = 'rgb(18,18,18)'
         ctx.fillRect(0, 0, 800, 800)
-        
+
         ctx.strokeStyle = 'rgb(68, 240, 34)'
         ctx.fillStyle = 'rgb(68, 240, 34)'
         for (const client of this.clients) {
-          if (client.active && Math.random() > 0.99) {
-            client.active = false
-          }
-          else if (!client.active && Math.random() < 0.01) client.active = true
 
+          // Canvas
           if (client.active) {
-            const rnd = Math.random()
-            if (rnd > 0.98) {
-              const changeVal = Math.random() * 1 + 0.5
-              if (client.speed < 15) client.speed += changeVal
-              else client.speed -= changeVal
-
-              client.speed = parseFloat(client.speed.toFixed(1))
-            }
-
-
-            if (Math.random() < 0.55) {
-              if (client.x < 800 && Math.random() > 0.5) client.x += Math.random() * 5
-              else client.x -= Math.random() * 2.5
-            }
-            else if (Math.random() > 0.5) {
-              if (client.y < 800 && Math.random() < 0.5) client.y += Math.random() * 5
-              else client.y -= Math.random() * 2.5
-            }
-
-            // Canvas
             ctx.beginPath()
             ctx.arc(client.x, client.y, 2, 0, 2 * Math.PI)
             ctx.fill()
@@ -360,15 +375,15 @@ export default {
         ctx.globalAlpha = 0.1
         ctx.fillStyle = 'rgb(91, 97, 91)'
         ctx.beginPath()
-        ctx.arc(400, 400, r3, 0, 2 * Math.PI)
+        ctx.arc(392, 392, r3, 0, 2 * Math.PI)
         ctx.fill()
-        
+
         // 3G
         const r2 = this.power * 3.25
         ctx.globalAlpha = 0.1
         ctx.fillStyle = 'rgb(73, 171, 72)'
         ctx.beginPath()
-        ctx.arc(400, 400, r2, 0, 2 * Math.PI)
+        ctx.arc(392, 392, r2, 0, 2 * Math.PI)
         ctx.fill()
 
         // Вычисление радиуса на основе мощность (4G сеть)
@@ -376,7 +391,7 @@ export default {
         ctx.globalAlpha = 0.1
         ctx.fillStyle = 'rgb(255, 0, 251)'
         ctx.beginPath()
-        ctx.arc(400, 400, r, 0, 2 * Math.PI)
+        ctx.arc(392, 392, r, 0, 2 * Math.PI)
         ctx.fill()
 
         ctx.globalAlpha = 1
