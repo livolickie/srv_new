@@ -1,3 +1,4 @@
+<!-- eslint-disable vue/valid-v-slot -->
 <template>
   <v-container fill-height>
     <v-row v-if="status != 'reload'">
@@ -53,13 +54,18 @@
         </v-list>
 
         <v-card class="pa-2 mt-4 d-flex flex-column">
-          <h3 class="text-center mb-2">Система: <span class="pa-1 success">OK</span></h3>
+          <h3 class="text-center mb-2">Система: <span class="pa-1" :class="{
+            'success': !startError, 'warning': startError
+          }">
+              {{ !startError ? 'ОК' : 'АВАРИЯ' }}
+            </span></h3>
           <v-btn class="mb-2" @click="status = 'reload'; reload()">Перезагрузить</v-btn>
-          <v-btn v-if="status != 'reload'" class="mb-2" :color="status != 'pause' ? '' : 'success'"
+          <v-btn v-if="status != 'reload' && !startError" class="mb-2" :color="status != 'pause' ? '' : 'success'"
             @click="status == 'active' ? status = 'pause' : status = 'active'; snack = status == 'pause'; snackMessage = 'Система поставлена на паузу'">
             {{ status != 'active' ? 'Возобновить' :
                 'Пауза'
             }}</v-btn>
+          <v-btn v-if="startError" @click="handleError()">Автоматика</v-btn>
         </v-card>
       </v-col>
 
@@ -90,14 +96,19 @@
                   <v-slider v-model="maxEnergy" min="350" max="800" step="10" thumb-label ticks></v-slider>
                 </v-col>
               </v-row>-->
-              <h3>Затрачено: {{ spentEnergy.toFixed(1) }}W</h3>
+              <h3 class="text-center">Затрачено: {{ spentEnergy.toFixed(1) }}W</h3>
             </v-container>
           </template>
           <template v-if="tab == 2">
             <v-scroll-x-transition>
               <h1 class="text-center">Клиенты</h1>
             </v-scroll-x-transition>
-            <v-data-table :headers="tHeaders" :items="tClients" :items-per-page="5" class="elevation-1"></v-data-table>
+            <v-data-table :headers="tHeaders" :items="tClients" :items-per-page="5" class="elevation-1">
+              // eslint-disable-next-line vue/valid-v-slot, vue/valid-v-slot
+              <template v-slot:item.actions="{ item }">
+                <v-btn @click="item.obj.active = false">Отключить</v-btn>
+              </template>
+            </v-data-table>
           </template>
           <template v-if="tab == 3">
             <v-scroll-x-transition>
@@ -105,10 +116,10 @@
             </v-scroll-x-transition>
             <v-container>
               <v-row>
-                <v-col lg="1">Лимит ({{ maxNetwork }} MB/s):</v-col>
-                <v-col>
+                <!-- <v-col lg="1">Лимит ({{ maxNetwork }} MB/s):</v-col> -->
+                <!-- <v-col>
                   <v-slider v-model="maxNetwork" min="800" max="1500" step="25" thumb-label ticks></v-slider>
-                </v-col>
+                </v-col> -->
               </v-row>
             </v-container>
 
@@ -118,9 +129,9 @@
             <v-scroll-x-transition>
               <h1 class="text-center">Карта сети</h1>
             </v-scroll-x-transition>
-            <container>
+            <v-container>
               <canvas id="canvas" width="800" height="800" class="mt-5" style="margin: 0 auto"></canvas>
-            </container>
+            </v-container>
           </template>
         </v-card>
       </v-col>
@@ -146,6 +157,15 @@
       {{ snackMessage }}
     </v-snackbar>
 
+    <v-snackbar v-model="errorSnack" :timeout="2000">
+      {{ errorMessage }}
+      <template #action="{ attrs }">
+        <v-btn color="blue" text v-bind="attrs" @click="snackbar = false">
+          Закрыть
+        </v-btn>
+      </template>
+    </v-snackbar>
+
   </v-container>
 </template>
 
@@ -164,7 +184,7 @@ export default {
   data() {
     return {
       status: 'active',
-      power: 0,
+      power: 100,
       energy: 0,
       clients: [
       ],
@@ -173,10 +193,13 @@ export default {
 
       spentPower: 0,
       spentEnergy: 0,
+      errorMessage: '',
 
       maxPower: 120,
       maxEnergy: 420,
       maxNetwork: 1000,
+      startError: false,
+      errorSnack: false,
 
       snackMessage: '',
       snack: false,
@@ -187,6 +210,7 @@ export default {
         { text: '№', value: 'id' },
         { text: 'Номер', value: 'number' },
         { text: 'Скорость', value: 'speed' },
+        { text: 'Действия', value: 'actions' },
       ],
       canvas: null,
       chartData: {
@@ -198,18 +222,18 @@ export default {
             fill: true,
             borderColor: 'rgb(75, 192, 192)'
           },
-          {
-            label: 'Мощность',
-            data: [],
-            fill: true,
-            borderColor: 'rgb(155, 48, 217)'
-          },
-          {
-            label: 'Электроэнергия',
-            data: [],
-            fill: true,
-            borderColor: 'rgb(77, 219, 37)'
-          }
+          // {
+          //   label: 'Мощность',
+          //   data: [],
+          //   fill: true,
+          //   borderColor: 'rgb(155, 48, 217)'
+          // },
+          // {
+          //   label: 'Электроэнергия',
+          //   data: [],
+          //   fill: true,
+          //   borderColor: 'rgb(77, 219, 37)'
+          // }
         ]
       },
       chartOptions: { responsive: true, maintainAspectRatio: false },
@@ -229,7 +253,8 @@ export default {
           number: client.number,
           speed: client.speed,
           x: client.x,
-          y: client.y
+          y: client.y,
+          obj: client
         })
         id++
       }
@@ -238,10 +263,11 @@ export default {
   },
   mounted() {
     this.init()
-    setInterval(this.update, 250)
+    setInterval(this.update, 500)
   },
   methods: {
     init() {
+      this.startError = false
       this.chartData = {
         labels: [],
         datasets: [
@@ -251,18 +277,18 @@ export default {
             fill: true,
             borderColor: 'rgb(75, 192, 192)'
           },
-          {
-            label: 'Мощность',
-            data: [],
-            fill: true,
-            borderColor: 'rgb(155, 48, 217)'
-          },
-          {
-            label: 'Электроэнергия',
-            data: [],
-            fill: true,
-            borderColor: 'rgb(77, 219, 37)'
-          }
+          // {
+          //   label: 'Мощность',
+          //   data: [],
+          //   fill: true,
+          //   borderColor: 'rgb(155, 48, 217)'
+          // },
+          // {
+          //   label: 'Электроэнергия',
+          //   data: [],
+          //   fill: true,
+          //   borderColor: 'rgb(77, 219, 37)'
+          // }
         ]
       }
       this.clients = []
@@ -280,6 +306,7 @@ export default {
     },
     reload() {
       clearInterval(this.loadInterval)
+      this.power = 100 + Math.random() * 10
       this.load = 0
       this.loadInterval = setInterval(() => {
         if (this.reload) {
@@ -288,7 +315,7 @@ export default {
           clearInterval(this.loadInterval)
         }
       }, 300)
-      setTimeout(this.init, 500)
+      setTimeout(this.init, 3000)
     },
     selectTab(_tab) {
       if (_tab === 4) {
@@ -298,29 +325,50 @@ export default {
       }
       this.tab = _tab
     },
+    handleError() {
+      this.power = 100 + 10 * Math.random()
+      this.startError = false;
+    },
+    errorHandler(reason = '') {
+      this.errorMessage = reason
+      this.errorSnack = true
+      this.status = 'pause'
+    },
     update() {
 
       if (this.status !== 'active') return
+
+      if (!this.startError) {
+        if (this.power < 60) {
+          this.startError = true
+          setTimeout(() => this.errorHandler('Мощность антенны слишком мала! Система поставлена паузу', 1500 + Math.random() * 1000))
+        }
+
+        if (this.power > 160) {
+          this.startError = true
+          setTimeout(() => this.errorHandler('Мощность антенны слишком высока! Система поставлена паузу', 1500 + Math.random() * 1000))
+        }
+      }
 
       this.network = 0
       // Сеть будет зависеть от клиентов
       for (const client of this.clients) {
 
-        if (Math.random() < 0.55) {
-          if (client.x < 800 && Math.random() > 0.5) client.x += Math.random() * 5
+        if (Math.random() < 0.95) {
+          if (client.x < 800 && Math.random() > 0.55) client.x += Math.random() * 5
           else client.x -= Math.random() * 2.5
         }
-        else if (Math.random() > 0.5) {
-          if (client.y < 800 && Math.random() < 0.5) client.y += Math.random() * 5
+        else if (Math.random() > 9.5) {
+          if (client.y < 800 && Math.random() < 0.55) client.y += Math.random() * 5
           else client.y -= Math.random() * 2.5
         }
 
-        const distance = Math.sqrt((Math.pow(client.x - 392, 2) + Math.pow(client.y - 392, 2)))
-        client.speed = distance * 0.1 + this.power / 50
-        if (client.active && Math.random() > 0.99) {
+        client.distance = Math.sqrt((Math.pow(client.x - 392, 2) + Math.pow(client.y - 392, 2)))
+        client.speed = client.distance * 0.01 + this.power / 50
+        if (client.active && Math.random() > 0.995) {
           client.active = false
         }
-        else if (!client.active && Math.random() < 0.01) client.active = true
+        else if (!client.active && Math.random() < 0.005) client.active = true
 
         if (client.active) {
           const rnd = Math.random()
@@ -357,11 +405,15 @@ export default {
         ctx.fillRect(0, 0, 800, 800)
 
         ctx.strokeStyle = 'rgb(68, 240, 34)'
-        ctx.fillStyle = 'rgb(68, 240, 34)'
         for (const client of this.clients) {
+
+          ctx.fillStyle = 'rgb(68, 240, 34)'
 
           // Canvas
           if (client.active) {
+            if (client.distance > this.power * 4.5) {
+              ctx.fillStyle = 'rgb(255, 200, 200)'
+            }
             ctx.beginPath()
             ctx.arc(client.x, client.y, 2, 0, 2 * Math.PI)
             ctx.fill()
@@ -404,16 +456,16 @@ export default {
 
       if (this.chartData.datasets[0].data.length > 400) {
         this.chartData.datasets[0].data.shift()
-        this.chartData.datasets[1].data.shift()
-        this.chartData.datasets[2].data.shift()
+        // this.chartData.datasets[1].data.shift()
+        // this.chartData.datasets[2].data.shift()
       }
       if (this.chartData.labels.length > 600) {
         this.chartData.labels.shift()
       }
       this.chartData.labels.push(new Date().toLocaleTimeString())
       this.chartData.datasets[0].data.push(this.network)
-      this.chartData.datasets[1].data.push(this.power)
-      this.chartData.datasets[2].data.push(this.energy)
+      // this.chartData.datasets[1].data.push(this.power)
+      // this.chartData.datasets[2].data.push(this.energy)
     }
   },
 }
