@@ -6,7 +6,8 @@
       </v-container>
     </v-main>
     <v-footer :absolute="!fixed" app class="d-flex justify-space-between">
-      <span>&copy;  - {{ new Date().getFullYear() }}</span>
+      <span>&copy; Рафиков Данил ПИ-421  - {{ new Date().getFullYear() }}</span>
+      <span>Система управления телефонной сетью</span>
       <div class="d-flex flex-row align-center">
         <v-switch v-model="$vuetify.theme.dark" ></v-switch>
         <span>Время: {{ time }}</span>
